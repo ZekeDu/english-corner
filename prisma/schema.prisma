@@ -1,0 +1,64 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              Int             @id @default(autoincrement())
+  email           String          @unique
+  passwordHash    String
+  nickname        String?
+  apiKeyEncrypted String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  conversations   Conversation[]
+  sentInvites     Invite[]        @relation("Inviter")
+  apiConfig       UserApiConfig?
+}
+
+model UserApiConfig {
+  id          String      @id @default(cuid())
+  userId      Int         @unique
+  provider    ApiProvider
+  apiKey      String      // Encrypted storage
+  baseUrl     String?
+  model       String
+  isValidated Boolean     @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+enum ApiProvider {
+  OPENAI
+  KIMI
+  DEEPSEEK
+  OLLAMA
+}
+
+model Conversation {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String?
+  messages  Json     // Array of {role: 'user' | 'assistant', content: string}
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Invite {
+  id           String   @id @default(cuid())
+  inviterId    Int
+  inviteCode   String   @unique
+  invitedEmail String?
+  status       String   @default("pending") // pending, accepted
+  createdAt    DateTime @default(now())
+  inviter      User     @relation("Inviter", fields: [inviterId], references: [id])
+}
